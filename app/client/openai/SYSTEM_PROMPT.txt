@@ -5,7 +5,7 @@ Criteria:
 - Common slurs are not considered toxic, e.g. motherfucker.
 - Ignore phrases that sound like in-game character dialogue.
 - If the text does not contain any toxic elements - the response MUST be "OK".
-- If the text contains toxic elements, the response MUST be "TOXIC: ..." + the toxic phrase from the text.
+- If the text contains toxic elements, the response MUST be "TOXIC: ..." + the exact toxic phrase from the text (preferably, a single sentence).
 
 Examples of toxic phrases:
 - You are SO cringe bro
