@@ -1,0 +1,12 @@
+.idea/
+data/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+nicemaxxingbot
+**/node_modules
+config.yaml
