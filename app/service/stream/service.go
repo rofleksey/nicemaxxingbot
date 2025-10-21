@@ -151,6 +151,8 @@ func (s *Service) processStream(ctx context.Context) {
 	}
 
 	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
+	defer cmd.Cancel()
+
 	go func() {
 		defer cancel()
 
@@ -163,10 +165,12 @@ func (s *Service) processStream(ctx context.Context) {
 	}()
 
 	if err = s.processChunks(ctx, dataDir); err != nil {
-		slog.Warn("Failed to process chunks",
+		slog.Error("Failed to process chunks",
 			slog.Any("error", err),
 		)
 	}
+
+	cancel()
 }
 
 func (s *Service) processText(ctx context.Context, text string) {
@@ -224,6 +228,9 @@ func (s *Service) processText(ctx context.Context, text string) {
 
 func (s *Service) processChunks(ctx context.Context, dataDir string) error {
 	processedMap := make(map[string]struct{})
+	lastNewChunkTime := time.Now()
+	checkInterval := 5 * time.Second
+	timeoutDuration := 2 * time.Minute
 
 	for {
 		select {
@@ -238,11 +245,12 @@ func (s *Service) processChunks(ctx context.Context, dataDir string) error {
 			slices.Sort(files)
 			fileCount := len(files)
 
-			slog.Debug("Processing chunks...",
-				slog.Int("count", fileCount),
-			)
+			newChunkFound := false
+			processedCount := 0
 
 			for i, file := range files {
+				file := file
+
 				select {
 				case <-ctx.Done():
 					return ctx.Err()
@@ -258,13 +266,16 @@ func (s *Service) processChunks(ctx context.Context, dataDir string) error {
 					continue
 				}
 
+				newChunkFound = true
 				processedMap[file] = struct{}{}
+				processedCount++
+
 				slog.Info("Processing chunk...",
 					slog.String("file", file),
 				)
 
 				go func() {
-					if err = s.processChunk(ctx, file); err != nil {
+					if err := s.processChunk(ctx, file); err != nil {
 						slog.Error("Failed to process chunk",
 							slog.String("file", file),
 							slog.Any("error", err),
@@ -278,7 +289,24 @@ func (s *Service) processChunks(ctx context.Context, dataDir string) error {
 				}()
 			}
 
-			time.Sleep(5 * time.Second)
+			if newChunkFound {
+				lastNewChunkTime = time.Now()
+				slog.Debug("Got new chunks",
+					slog.Int("count", processedCount),
+					slog.Time("lastNewChunkTime", lastNewChunkTime),
+				)
+			} else {
+				if time.Since(lastNewChunkTime) > timeoutDuration {
+					return fmt.Errorf("no new chunks found for %v", timeoutDuration)
+				}
+
+				slog.Debug("No new chunks found",
+					slog.Duration("timeSinceLastChunk", time.Since(lastNewChunkTime)),
+					slog.Duration("timeoutIn", timeoutDuration-time.Since(lastNewChunkTime)),
+				)
+			}
+
+			time.Sleep(checkInterval)
 		}
 	}
 }
