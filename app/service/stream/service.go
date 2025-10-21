@@ -203,7 +203,7 @@ func (s *Service) processText(ctx context.Context, text string) {
 	savedTime := s.savedTime
 	s.m.Unlock()
 
-	if !savedTime.IsZero() {
+	if savedTime.IsZero() {
 		slogger.Error("No saved time found")
 		return
 	}
