@@ -4,8 +4,10 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"net/http"
 	"nicemaxxingbot/app/config"
 	"strings"
+	"time"
 
 	"github.com/rofleksey/meg"
 	"github.com/samber/do"
@@ -32,6 +34,9 @@ func newOpenaiClient(cfg *config.Config, free bool) *openai.Client {
 
 	clientConfig := openai.DefaultConfig(openaiCfg.Token)
 	clientConfig.BaseURL = openaiCfg.BaseURL
+	clientConfig.HTTPClient = &http.Client{
+		Timeout: 30 * time.Second,
+	}
 	return openai.NewClientWithConfig(clientConfig)
 }
 
