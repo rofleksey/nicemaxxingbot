@@ -13,7 +13,7 @@ ENV ENVIRONMENT=production
 ENV CGO_ENABLED=0
 WORKDIR /opt
 RUN apk update && \
-    apk add --no-cache curl ca-certificates && \
+    apk add --no-cache curl ca-certificates ffmpeg && \
     update-ca-certificates && \
     ulimit -n 100000
 COPY --from=apiBuilder /opt/nicemaxxingbot /opt/nicemaxxingbot
