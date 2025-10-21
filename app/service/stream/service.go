@@ -218,12 +218,17 @@ func (s *Service) processText(ctx context.Context, text string) {
 	s.savedTime = time.Now()
 	s.m.Unlock()
 
-	if err = s.twitchClient.SendMessage(s.cfg.Twitch.Username, notificationText); err != nil {
+	if err = s.twitchClient.SendMessage(s.cfg.Streamer, notificationText); err != nil {
 		slogger.Error("Failed to send notification",
 			slog.String("phrase", phrase),
 		)
 		return
 	}
+
+	slogger.Info("Found toxic phrase",
+		slog.String("phrase", phrase),
+		slog.Bool("telegram", true),
+	)
 }
 
 func (s *Service) processChunks(ctx context.Context, dataDir string) error {

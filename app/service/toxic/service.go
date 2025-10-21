@@ -80,6 +80,9 @@ func (s *Service) ProcessTranscription(ctx context.Context, text string) (string
 		slog.Bool("result", isToxic),
 		slog.Duration("duration", time.Since(start)),
 	)
+	if !isToxic {
+		return "", false, nil
+	}
 
 	return phrase, true, nil
 }
