@@ -24,7 +24,7 @@ import (
 
 const maxMessageLength = 400
 const dataDir = "data"
-const notificationFormat = "Nicemaxxing streak is over NotLikeThis It lasted for ~%d minutes NotLikeThis Toxic phrase: %s"
+const notificationFormat = "sable ~%d m sableL %s pingus"
 
 type Service struct {
 	cfg              *config.Config
