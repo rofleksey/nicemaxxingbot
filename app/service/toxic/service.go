@@ -24,65 +24,61 @@ func New(di *do.Injector) (*Service, error) {
 	}, nil
 }
 
-func (s *Service) checkToxicity(ctx context.Context, text string, useFreeClient bool) (string, bool, error) {
-	resultStr := ""
-	result := false
+func (s *Service) checkToxicity(ctx context.Context, text string, useFreeClient bool) (*openai.AnalyzeResult, error) {
+	var result *openai.AnalyzeResult
 
 	attempts := 3
 
 	err := retry.Do(func() error {
-		phrase, isToxic, err := s.client.CheckToxicity(ctx, text, useFreeClient)
+		res, err := s.client.Analyze(ctx, text, useFreeClient)
 		if err != nil {
 			return fmt.Errorf("CheckToxicity: %w", err)
 		}
 
-		resultStr = phrase
-		result = isToxic
+		result = res
 
 		return nil
 	}, retry.Context(ctx), retry.Attempts(uint(attempts)), retry.Delay(time.Second*5))
 	if err != nil {
-		return "", false, fmt.Errorf("retry.Do: %w", err)
+		return nil, fmt.Errorf("retry.Do: %w", err)
 	}
 
-	return resultStr, result, nil
+	return result, nil
 }
 
-func (s *Service) ProcessTranscription(ctx context.Context, text string) (string, bool, error) {
+func (s *Service) ProcessTranscription(ctx context.Context, text string) (*openai.AnalyzeResult, error) {
 	slogger := slog.With(slog.String("text", text))
 	slogger.Debug("Processing text...")
 
 	start := time.Now()
 	slogger.Debug("Using free ai to check for toxicity...")
-	_, isToxic, err := s.checkToxicity(ctx, text, true)
+
+	toxicResult, err := s.checkToxicity(ctx, text, true)
 	if err != nil {
-		return "", false, fmt.Errorf("checkToxicity(free): %w", err)
+		return nil, fmt.Errorf("checkToxicity(free): %w", err)
 	}
 
 	slogger.Debug("Checked toxicity (free)",
-		slog.Bool("result", isToxic),
+		slog.Bool("result", toxicResult.Toxic),
 		slog.Duration("duration", time.Since(start)),
 	)
-
-	if !isToxic {
-		return "", false, nil
+	if !toxicResult.Toxic {
+		return toxicResult, nil
 	}
 
 	// only use paid client to confirm
 	start = time.Now()
 	slogger.Debug("Confirming with paid ai..")
-	phrase, isToxic, err := s.checkToxicity(ctx, text, false)
+
+	toxicResult, err = s.checkToxicity(ctx, text, false)
 	if err != nil {
-		return "", false, fmt.Errorf("checkToxicity(paid): %w", err)
+		return nil, fmt.Errorf("checkToxicity(paid): %w", err)
 	}
 
 	slogger.Debug("Checked toxicity (paid)",
-		slog.Bool("result", isToxic),
+		slog.Bool("result", toxicResult.Toxic),
 		slog.Duration("duration", time.Since(start)),
 	)
-	if !isToxic {
-		return "", false, nil
-	}
 
-	return phrase, true, nil
+	return toxicResult, nil
 }

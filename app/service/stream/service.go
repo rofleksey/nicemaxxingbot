@@ -33,8 +33,9 @@ type Service struct {
 	twitchLiveClient *twitch_live.Client
 	toxicService     *toxic.Service
 
-	m         sync.Mutex
-	savedTime time.Time
+	m           sync.Mutex
+	savedTime   time.Time
+	turnOffTime time.Time
 
 	textChan chan string
 	wg       sync.WaitGroup
@@ -178,7 +179,7 @@ func (s *Service) processText(ctx context.Context, text string) {
 	)
 
 	slogger.Info("Processing text...")
-	phrase, isToxic, err := s.toxicService.ProcessTranscription(ctx, text)
+	toxicResult, err := s.toxicService.ProcessTranscription(ctx, text)
 	if err != nil {
 		slogger.Error("Failed to process transcription",
 			slog.Any("error", err),
@@ -186,13 +187,49 @@ func (s *Service) processText(ctx context.Context, text string) {
 		return
 	}
 
-	if !isToxic {
+	if toxicResult.TurnOff {
+		slogger.Info("Requested to turn the bot OFF",
+			slog.Bool("telegram", true),
+		)
+
+		s.m.Lock()
+		s.turnOffTime = time.Now().Add(12 * time.Hour)
+		s.m.Unlock()
+
 		return
 	}
 
+	if toxicResult.TurnOn {
+		slogger.Info("Requested to turn the bot ON",
+			slog.Bool("telegram", true),
+		)
+
+		s.m.Lock()
+		s.turnOffTime = time.Time{}
+		s.m.Unlock()
+
+		return
+	}
+
+	if !toxicResult.Toxic {
+		return
+	}
+
+	s.m.Lock()
+	turnOffTime := s.turnOffTime
+	s.m.Unlock()
+
 	if s.cfg.Twitch.DisableNotifications {
 		slogger.Info("Found toxic phrase, but notifications are disabled",
-			slog.String("phrase", phrase),
+			slog.String("phrase", toxicResult.Phrase),
+			slog.Bool("telegram", true),
+		)
+		return
+	}
+
+	if time.Now().Before(turnOffTime) {
+		slogger.Info("Found toxic phrase, but bot is temporarily disabled",
+			slog.String("phrase", toxicResult.Phrase),
 			slog.Bool("telegram", true),
 		)
 		return
@@ -200,6 +237,7 @@ func (s *Service) processText(ctx context.Context, text string) {
 
 	s.m.Lock()
 	savedTime := s.savedTime
+	s.savedTime = time.Now()
 	s.m.Unlock()
 
 	if savedTime.IsZero() {
@@ -210,22 +248,26 @@ func (s *Service) processText(ctx context.Context, text string) {
 	streakDuration := time.Since(savedTime)
 	streakDurationMinutes := int(streakDuration.Minutes())
 
-	notificationText := fmt.Sprintf(notificationFormat, streakDurationMinutes, phrase)
-	notificationText = strutil.Summary(notificationText, maxMessageLength, "...")
+	if streakDurationMinutes < s.cfg.Twitch.MinStreakLength {
+		slogger.Info("Found toxic phrase, but streak is too low",
+			slog.String("phrase", toxicResult.Phrase),
+			slog.Bool("telegram", true),
+		)
+		return
+	}
 
-	s.m.Lock()
-	s.savedTime = time.Now()
-	s.m.Unlock()
+	notificationText := fmt.Sprintf(notificationFormat, streakDurationMinutes, toxicResult.Phrase)
+	notificationText = strutil.Summary(notificationText, maxMessageLength, "...")
 
 	if err = s.twitchClient.SendMessage(s.cfg.Streamer, notificationText); err != nil {
 		slogger.Error("Failed to send notification",
-			slog.String("phrase", phrase),
+			slog.String("phrase", toxicResult.Phrase),
 		)
 		return
 	}
 
 	slogger.Info("Found toxic phrase",
-		slog.String("phrase", phrase),
+		slog.String("phrase", toxicResult.Phrase),
 		slog.Bool("telegram", true),
 	)
 }

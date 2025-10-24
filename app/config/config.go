@@ -56,6 +56,8 @@ type Twitch struct {
 	RefreshToken string `yaml:"refresh_token" example:"v1.abc123def456ghi789jkl012mno345pqr678stu901vwx234yz567" validate:"required"`
 	// Disable notifications
 	DisableNotifications bool `yaml:"disable_notifications" example:"false"`
+	// Minimum streak length in minutes
+	MinStreakLength int `yaml:"min_streak_length" example:"30"`
 }
 
 type OpenAI struct {
@@ -106,6 +108,9 @@ func Load(configPath string) (*Config, error) {
 	}
 	if result.Processing.BatchTimeout == 0 {
 		result.Processing.BatchTimeout = 120
+	}
+	if result.Twitch.MinStreakLength == 0 {
+		result.Twitch.MinStreakLength = 30
 	}
 
 	validate := validator.New(validator.WithRequiredStructEnabled())

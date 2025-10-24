@@ -98,27 +98,44 @@ func (c *Client) Ping(ctx context.Context) error {
 	return nil
 }
 
-func (c *Client) CheckToxicity(ctx context.Context, text string, useFreeClient bool) (string, bool, error) {
+func (c *Client) Analyze(ctx context.Context, text string, useFreeClient bool) (*AnalyzeResult, error) {
 	resp, err := c.doCompletionRequest(ctx, text, useFreeClient)
 	if err != nil {
-		return "", false, fmt.Errorf("CreateChatCompletion: %w", err)
+		return nil, fmt.Errorf("CreateChatCompletion: %w", err)
 	}
 
 	if len(resp.Choices) == 0 {
-		return "", false, fmt.Errorf("empty openai response")
+		return nil, fmt.Errorf("empty openai response")
 	}
 
 	rawResult := strings.TrimSpace(resp.Choices[0].Message.Content)
 
 	if rawResult == "OK" {
-		return "", false, nil
+		return &AnalyzeResult{
+			Toxic: false,
+		}, nil
+	}
+
+	if rawResult == "OFF" {
+		return &AnalyzeResult{
+			TurnOff: true,
+		}, nil
+	}
+
+	if rawResult == "ON" {
+		return &AnalyzeResult{
+			TurnOn: true,
+		}, nil
 	}
 
 	if strings.HasPrefix(rawResult, "TOXIC:") {
 		rawResult = strings.TrimPrefix(rawResult, "TOXIC:")
 		rawResult = strings.TrimSpace(rawResult)
-		return rawResult, true, nil
+		return &AnalyzeResult{
+			Toxic:  true,
+			Phrase: rawResult,
+		}, nil
 	}
 
-	return "", false, fmt.Errorf("invalid openai response: %s", rawResult)
+	return nil, fmt.Errorf("invalid openai response: %s", rawResult)
 }
