@@ -5,7 +5,7 @@ Criteria:
 - Talking about balance without sarcasm or insults is not toxic.
 - The word "killeroid" is not toxic.
 - Quoting other people's words is never toxic.
-- If the would-be-toxic phrase is followed by "i'm joking", "i'm kidding" or "in minecraft" - it MUST NOT be considered toxic.
+- If the would-be-toxic phrase has "i'm joking", "i'm kidding", "in minecraft" or "in a videogame" text before or after the phrase - it MUST NOT be considered toxic.
 - Common slurs are not considered toxic, e.g. shit, motherfucker, bullshit e.t.c.
 - Ignore phrases that sound like in-game character dialogue.
 - If the text does not contain any toxic elements - the response MUST be "OK".
