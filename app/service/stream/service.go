@@ -25,6 +25,8 @@ import (
 const maxMessageLength = 400
 const dataDir = "data"
 const notificationFormat = "Nicemaxxing streak is over pingus It lasted for ~%d minutes pingus Toxic phrase: %s"
+const turnOffText = "pingus Bot is muted for 12 hours pingus"
+const turnOnText = "pingus Bot is back in action pingus"
 
 type Service struct {
 	cfg              *config.Config
@@ -192,6 +194,15 @@ func (s *Service) processText(ctx context.Context, text string) {
 			slog.Bool("telegram", true),
 		)
 
+		if !s.cfg.Twitch.DisableNotifications {
+			if err = s.twitchClient.SendMessage(s.cfg.Streamer, turnOffText); err != nil {
+				slogger.Error("Failed to send turn off notification",
+					slog.String("phrase", toxicResult.Phrase),
+				)
+				return
+			}
+		}
+
 		s.m.Lock()
 		s.turnOffTime = time.Now().Add(12 * time.Hour)
 		s.m.Unlock()
@@ -203,6 +214,15 @@ func (s *Service) processText(ctx context.Context, text string) {
 		slogger.Info("Requested to turn the bot ON",
 			slog.Bool("telegram", true),
 		)
+
+		if !s.cfg.Twitch.DisableNotifications {
+			if err = s.twitchClient.SendMessage(s.cfg.Streamer, turnOnText); err != nil {
+				slogger.Error("Failed to send turn on notification",
+					slog.String("phrase", toxicResult.Phrase),
+				)
+				return
+			}
+		}
 
 		s.m.Lock()
 		s.turnOffTime = time.Time{}
