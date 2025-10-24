@@ -123,6 +123,7 @@ func (s *Service) processStream(ctx context.Context) {
 		slog.String("quality", streamQuality.Quality),
 		slog.String("resolution", streamQuality.Resolution),
 		slog.String("url", streamQuality.URL),
+		slog.Bool("telegram", true),
 	)
 
 	m3u8URL := streamQuality.URL
@@ -235,20 +236,8 @@ func (s *Service) processText(ctx context.Context, text string) {
 		return
 	}
 
-	s.m.Lock()
-	turnOffTime := s.turnOffTime
-	s.m.Unlock()
-
 	if s.cfg.Twitch.DisableNotifications {
 		slogger.Info("Found toxic phrase, but notifications are disabled",
-			slog.String("phrase", toxicResult.Phrase),
-			slog.Bool("telegram", true),
-		)
-		return
-	}
-
-	if time.Now().Before(turnOffTime) {
-		slogger.Info("Found toxic phrase, but bot is temporarily disabled",
 			slog.String("phrase", toxicResult.Phrase),
 			slog.Bool("telegram", true),
 		)
@@ -258,6 +247,7 @@ func (s *Service) processText(ctx context.Context, text string) {
 	s.m.Lock()
 	savedTime := s.savedTime
 	s.savedTime = time.Now()
+	turnOffTime := s.turnOffTime
 	s.m.Unlock()
 
 	if savedTime.IsZero() {
@@ -270,6 +260,14 @@ func (s *Service) processText(ctx context.Context, text string) {
 
 	if streakDurationMinutes < s.cfg.Twitch.MinStreakLength {
 		slogger.Info("Found toxic phrase, but streak is too low",
+			slog.String("phrase", toxicResult.Phrase),
+			slog.Bool("telegram", true),
+		)
+		return
+	}
+
+	if time.Now().Before(turnOffTime) {
+		slogger.Info("Found toxic phrase, but bot is temporarily disabled",
 			slog.String("phrase", toxicResult.Phrase),
 			slog.Bool("telegram", true),
 		)

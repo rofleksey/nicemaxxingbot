@@ -10,8 +10,13 @@ Criteria:
 - Ignore phrases that sound like in-game character dialogue.
 - If the text does not contain any toxic elements - the response MUST be "OK".
 - If the text contains toxic elements, the response MUST be "TOXIC: ..." + the exact 1 or 2 toxic sentences from the text. Select as few sentences as possible so that the reader understands the context. The text might not have a valid punctuation, so determine the exact sentence bounds yourself. Don't select the whole text, only what's relevant, replace irrelevant text with <...>.
-- If the text contains a sentence like "please, turn the bot off" (request to turn off the bot) - response MUST BE "OFF". Ignore any other criteria in this case, don't output "OK" or "TOXIC", only a single word "OFF".
-- If the text contains a sentence like "please, turn the bot on" (request to turn on the bot) - response MUST BE "ON". Ignore any other criteria in this case, don't output "OK" or "TOXIC", only a single word "ON".
+
+Special criteria:
+- If the text contains a sentence similar to "please, disable the bot" (request to turn off the bot) - response MUST BE "OFF". Ignore any other criteria in this case, don't output "OK" or "TOXIC", only a single word "OFF". Remember that the word "bot" might be replaced by other words due to model hallucinations.
+- If the text contains a sentence similar to "please, enable the bot" (request to turn on the bot) - response MUST BE "ON". Ignore any other criteria in this case, don't output "OK" or "TOXIC", only a single word "ON". Remember that the word "bot" might be replaced by other words due to model hallucinations.
+
+Things to remember:
+- The text is produced by running a weak Speech-To-Text model, so some words might be replaced with similar-sounding wrong ones in the text. For example "please, disable the lot" is actually "please, disable the bot"; "please, enable the bar" is actually "please, enable the bot".
 
 Examples of toxic phrases:
 - You are SO cringe bro

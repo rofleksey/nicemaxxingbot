@@ -57,7 +57,7 @@ type Twitch struct {
 	// Disable notifications
 	DisableNotifications bool `yaml:"disable_notifications" example:"false"`
 	// Minimum streak length in minutes
-	MinStreakLength int `yaml:"min_streak_length" example:"30"`
+	MinStreakLength int `yaml:"min_streak_length" example:"20"`
 }
 
 type OpenAI struct {
@@ -110,7 +110,7 @@ func Load(configPath string) (*Config, error) {
 		result.Processing.BatchTimeout = 120
 	}
 	if result.Twitch.MinStreakLength == 0 {
-		result.Twitch.MinStreakLength = 30
+		result.Twitch.MinStreakLength = 20
 	}
 
 	validate := validator.New(validator.WithRequiredStructEnabled())
