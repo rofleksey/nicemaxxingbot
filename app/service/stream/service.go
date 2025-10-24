@@ -17,7 +17,6 @@ import (
 	"nicemaxxingbot/app/config"
 	"nicemaxxingbot/app/service/toxic"
 
-	"github.com/avast/retry-go"
 	"github.com/elliotchance/pie/v2"
 	"github.com/ozgio/strutil"
 	"github.com/samber/do"
@@ -317,25 +316,14 @@ func (s *Service) processChunks(ctx context.Context, dataDir string) error {
 }
 
 func (s *Service) transcribe(ctx context.Context, filePath string) (string, error) {
-	var text string
-
 	slogger := slog.With(slog.String("filePath", filePath))
 
 	start := time.Now()
 	slogger.Debug("Transcribing file...")
 
-	err := retry.Do(func() error {
-		result, err := s.whisperClient.TranscribeFile(ctx, filePath)
-		if err != nil {
-			return fmt.Errorf("TranscribeFile: %w", err)
-		}
-
-		text = result
-
-		return nil
-	}, retry.Context(ctx), retry.Attempts(2), retry.Delay(time.Second*5))
+	text, err := s.whisperClient.TranscribeFile(ctx, filePath)
 	if err != nil {
-		return "", fmt.Errorf("retry.Do: %w", err)
+		return "", fmt.Errorf("TranscribeFile: %w", err)
 	}
 
 	slogger = slog.With(slog.String("text", text))
