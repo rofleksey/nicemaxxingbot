@@ -138,6 +138,7 @@ func (s *Service) processStream(ctx context.Context) {
 	}
 
 	args := []string{
+		"-hwaccel", "auto",
 		"-timeout", "10000000", // 10s
 		"-reconnect", "0",
 		"-reconnect_at_eof", "0",
